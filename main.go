@@ -24,6 +24,19 @@ var (
 	logFile       *os.File
 )
 
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `Server Monitor CLI Tool
+
+Usage:
+  server-monitor [options]
+
+Options:
+`)
+		flag.PrintDefaults()
+	}
+}
+
 func main() {
 	// CLI flags
 	flag.IntVar(&interval, "interval", 0, "Interval in seconds to refresh stats (0 = run once)")
