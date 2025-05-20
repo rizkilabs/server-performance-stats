@@ -11,73 +11,107 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-func GetFormattedStats() (string, error) {
+type Stats struct {
+	OS            string  `json:"os"`
+	CPUPercent    float64 `json:"cpu_percent"`
+	MemoryUsed    string  `json:"memory_used"`
+	MemoryTotal   string  `json:"memory_total"`
+	MemoryUsedPct float64 `json:"memory_used_percent"`
+	DiskUsed      string  `json:"disk_used"`
+	DiskTotal     string  `json:"disk_total"`
+	DiskUsedPct   float64 `json:"disk_used_percent"`
+	Load1         float64 `json:"load_1,omitempty"`
+	Load5         float64 `json:"load_5,omitempty"`
+	Load15        float64 `json:"load_15,omitempty"`
+	LoadMsg       string  `json:"load_msg,omitempty"`
+}
+
+// CollectStats gathers raw system stats and returns a summary
+func CollectStats() (Stats, string, error) {
+	var s Stats
 	osName := runtime.GOOS
+	s.OS = osName
 
 	// CPU
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
-		return "", fmt.Errorf("CPU usage: %w", err)
+		return s, "", fmt.Errorf("CPU usage: %w", err)
 	}
-	cpuVal := cpuPercent[0]
+	s.CPUPercent = cpuPercent[0]
 
 	// Memory
 	vmStat, err := mem.VirtualMemory()
 	if err != nil {
-		return "", fmt.Errorf("Memory usage: %w", err)
+		return s, "", fmt.Errorf("Memory usage: %w", err)
 	}
+	s.MemoryUsedPct = vmStat.UsedPercent
+	s.MemoryUsed = formatBytes(vmStat.Used)
+	s.MemoryTotal = formatBytes(vmStat.Total)
 
 	// Disk
 	diskStat, err := disk.Usage("/")
 	if err != nil {
-		return "", fmt.Errorf("Disk usage: %w", err)
+		return s, "", fmt.Errorf("Disk usage: %w", err)
 	}
+	s.DiskUsedPct = diskStat.UsedPercent
+	s.DiskUsed = formatBytes(diskStat.Used)
+	s.DiskTotal = formatBytes(diskStat.Total)
 
 	// Load Average
-	var loadLine string
 	if osName == "linux" || osName == "darwin" {
 		loadStat, err := load.Avg()
-		if err != nil {
-			loadLine = "Load Average  : unavailable (error)"
+		if err == nil {
+			s.Load1 = loadStat.Load1
+			s.Load5 = loadStat.Load5
+			s.Load15 = loadStat.Load15
 		} else {
-			loadLine = fmt.Sprintf("Load Average  : %.2f / %.2f / %.2f (1m / 5m / 15m)", loadStat.Load1, loadStat.Load5, loadStat.Load15)
+			s.LoadMsg = "Error retrieving load average"
 		}
 	} else {
-		loadLine = "Load Average  : not supported on this OS"
+		s.LoadMsg = "Load average not supported on this OS"
 	}
 
-	// Summary Alert
+	// Summary
 	summary := "System status: Normal"
 	switch {
-	case cpuVal > 80:
+	case s.CPUPercent > 80:
 		summary = "⚠️  High CPU usage detected!"
-	case vmStat.UsedPercent > 90:
+	case s.MemoryUsedPct > 90:
 		summary = "⚠️  High memory usage detected!"
-	case diskStat.UsedPercent > 90:
+	case s.DiskUsedPct > 90:
 		summary = "⚠️  Disk almost full!"
 	}
 
-	// Format output
-	stats := fmt.Sprintf(`
+	return s, summary, nil
+}
+
+// FormatStats creates a plain-text string from Stats and summary
+func FormatStats(s Stats, summary string) string {
+	loadLine := ""
+	if s.LoadMsg != "" {
+		loadLine = fmt.Sprintf("Load Average  : %s", s.LoadMsg)
+	} else {
+		loadLine = fmt.Sprintf("Load Average  : %.2f / %.2f / %.2f (1m / 5m / 15m)", s.Load1, s.Load5, s.Load15)
+	}
+
+	return fmt.Sprintf(`
 ==============================
  Server Performance Snapshot
 ==============================
 Operating System: %s
 CPU Usage       : %.2f%%
-Memory Usage    : %.2f%% (%v / %v)
-Disk Usage      : %.2f%% (%v / %v)
+Memory Usage    : %.2f%% (%s / %s)
+Disk Usage      : %.2f%% (%s / %s)
 %s
 ------------------------------
 %s
-`, osName,
-		cpuVal,
-		vmStat.UsedPercent, formatBytes(vmStat.Used), formatBytes(vmStat.Total),
-		diskStat.UsedPercent, formatBytes(diskStat.Used), formatBytes(diskStat.Total),
+`, s.OS,
+		s.CPUPercent,
+		s.MemoryUsedPct, s.MemoryUsed, s.MemoryTotal,
+		s.DiskUsedPct, s.DiskUsed, s.DiskTotal,
 		loadLine,
 		summary,
 	)
-
-	return stats, nil
 }
 
 func formatBytes(b uint64) string {
