@@ -1,0 +1,15 @@
+# Binaries
+server-performance-stats
+
+# Logs/Export
+*.log
+*.csv
+/data/
+
+# IDE/editor
+.vscode/
+*.swp
+.DS_Store
+
+# Go
+go.sum
