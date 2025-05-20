@@ -1,0 +1,103 @@
+2025/05/20 13:47:18 [2025-05-20T13:47:18+07:00] System status: Normal
+
+2025/05/20 13:47:21 [2025-05-20T13:47:21+07:00] System status: Normal
+
+2025/05/20 13:47:24 [2025-05-20T13:47:24+07:00] System status: Normal
+
+2025/05/20 13:47:27 [2025-05-20T13:47:27+07:00] System status: Normal
+
+2025/05/20 13:47:30 [2025-05-20T13:47:30+07:00] System status: Normal
+
+2025/05/20 13:47:33 [2025-05-20T13:47:33+07:00] System status: Normal
+
+2025/05/20 13:47:36 [2025-05-20T13:47:36+07:00] System status: Normal
+
+2025/05/20 13:47:39 [2025-05-20T13:47:39+07:00] System status: Normal
+
+2025/05/20 13:47:42 [2025-05-20T13:47:42+07:00] System status: Normal
+
+2025/05/20 13:48:09 {
+  "timestamp": "2025-05-20T13:48:09+07:00",
+  "stats": {
+    "os": "darwin",
+    "cpu_percent": 9.135802469112292,
+    "memory_used": "4.2 GB",
+    "memory_total": "16.0 GB",
+    "memory_used_percent": 25.939369201660156,
+    "disk_used": "10.3 GB",
+    "disk_total": "111.6 GB",
+    "disk_used_percent": 18.502782355574084,
+    "load_1": 2.0625,
+    "load_5": 2.16455078125,
+    "load_15": 1.9228515625
+  },
+  "summary": "System status: Normal"
+}
+2025/05/20 13:48:12 {
+  "timestamp": "2025-05-20T13:48:12+07:00",
+  "stats": {
+    "os": "darwin",
+    "cpu_percent": 18.90547263677405,
+    "memory_used": "4.1 GB",
+    "memory_total": "16.0 GB",
+    "memory_used_percent": 25.911974906921387,
+    "disk_used": "10.3 GB",
+    "disk_total": "111.6 GB",
+    "disk_used_percent": 18.502778565306528,
+    "load_1": 2.0625,
+    "load_5": 2.16455078125,
+    "load_15": 1.9228515625
+  },
+  "summary": "System status: Normal"
+}
+2025/05/20 13:48:15 {
+  "timestamp": "2025-05-20T13:48:15+07:00",
+  "stats": {
+    "os": "darwin",
+    "cpu_percent": 43.532338308452985,
+    "memory_used": "4.2 GB",
+    "memory_total": "16.0 GB",
+    "memory_used_percent": 26.053714752197266,
+    "disk_used": "10.3 GB",
+    "disk_total": "111.6 GB",
+    "disk_used_percent": 18.502769721354937,
+    "load_1": 2.05712890625,
+    "load_5": 2.16162109375,
+    "load_15": 1.9228515625
+  },
+  "summary": "System status: Normal"
+}
+2025/05/20 13:48:18 {
+  "timestamp": "2025-05-20T13:48:18+07:00",
+  "stats": {
+    "os": "darwin",
+    "cpu_percent": 19.70074812970545,
+    "memory_used": "4.2 GB",
+    "memory_total": "16.0 GB",
+    "memory_used_percent": 26.096320152282715,
+    "disk_used": "10.3 GB",
+    "disk_total": "111.6 GB",
+    "disk_used_percent": 18.502769721354937,
+    "load_1": 2.05712890625,
+    "load_5": 2.16162109375,
+    "load_15": 1.9228515625
+  },
+  "summary": "System status: Normal"
+}
+2025/05/20 13:48:21 {
+  "timestamp": "2025-05-20T13:48:21+07:00",
+  "stats": {
+    "os": "darwin",
+    "cpu_percent": 4.987531172003763,
+    "memory_used": "4.2 GB",
+    "memory_total": "16.0 GB",
+    "memory_used_percent": 25.994133949279785,
+    "disk_used": "10.3 GB",
+    "disk_total": "111.6 GB",
+    "disk_used_percent": 18.502769721354937,
+    "load_1": 2.05224609375,
+    "load_5": 2.15869140625,
+    "load_15": 1.9228515625
+  },
+  "summary": "System status: Normal"
+}
