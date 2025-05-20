@@ -56,5 +56,6 @@ Press `Ctrl+C` to exit the monitor safely. It will flush logs and close the CSV 
 
 ## 📝 License
 
-MIT License © 2025 Mochamad Rizki
+MIT License <br>
+© 2025 Mochamad Rizki
 ```
