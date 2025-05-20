@@ -26,39 +26,33 @@ type Stats struct {
 	LoadMsg       string  `json:"load_msg,omitempty"`
 }
 
-// CollectStats gathers raw system stats and returns a summary
-func CollectStats() (Stats, string, error) {
+func CollectStats() (Stats, error) {
 	var s Stats
-	osName := runtime.GOOS
-	s.OS = osName
+	s.OS = runtime.GOOS
 
-	// CPU
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
-		return s, "", fmt.Errorf("CPU usage: %w", err)
+		return s, fmt.Errorf("CPU usage: %w", err)
 	}
 	s.CPUPercent = cpuPercent[0]
 
-	// Memory
 	vmStat, err := mem.VirtualMemory()
 	if err != nil {
-		return s, "", fmt.Errorf("Memory usage: %w", err)
+		return s, fmt.Errorf("Memory usage: %w", err)
 	}
 	s.MemoryUsedPct = vmStat.UsedPercent
 	s.MemoryUsed = formatBytes(vmStat.Used)
 	s.MemoryTotal = formatBytes(vmStat.Total)
 
-	// Disk
 	diskStat, err := disk.Usage("/")
 	if err != nil {
-		return s, "", fmt.Errorf("Disk usage: %w", err)
+		return s, fmt.Errorf("Disk usage: %w", err)
 	}
 	s.DiskUsedPct = diskStat.UsedPercent
 	s.DiskUsed = formatBytes(diskStat.Used)
 	s.DiskTotal = formatBytes(diskStat.Total)
 
-	// Load Average
-	if osName == "linux" || osName == "darwin" {
+	if s.OS == "linux" || s.OS == "darwin" {
 		loadStat, err := load.Avg()
 		if err == nil {
 			s.Load1 = loadStat.Load1
@@ -71,21 +65,23 @@ func CollectStats() (Stats, string, error) {
 		s.LoadMsg = "Load average not supported on this OS"
 	}
 
-	// Summary
-	summary := "System status: Normal"
-	switch {
-	case s.CPUPercent > 80:
-		summary = "⚠️  High CPU usage detected!"
-	case s.MemoryUsedPct > 90:
-		summary = "⚠️  High memory usage detected!"
-	case s.DiskUsedPct > 90:
-		summary = "⚠️  Disk almost full!"
-	}
-
-	return s, summary, nil
+	return s, nil
 }
 
-// FormatStats creates a plain-text string from Stats and summary
+// Evaluates thresholds and returns a summary string
+func EvaluateThresholds(s Stats) string {
+	switch {
+	case s.CPUPercent > cpuThreshold:
+		return "⚠️  High CPU usage detected!"
+	case s.MemoryUsedPct > memThreshold:
+		return "⚠️  High memory usage detected!"
+	case s.DiskUsedPct > diskThreshold:
+		return "⚠️  Disk almost full!"
+	default:
+		return "✅ System status: Normal"
+	}
+}
+
 func FormatStats(s Stats, summary string) string {
 	loadLine := ""
 	if s.LoadMsg != "" {
