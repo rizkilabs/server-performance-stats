@@ -44,6 +44,7 @@ func getFormattedStats() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("CPU usage: %w", err)
 	}
+	cpuVal := cpuPercent[0]
 
 	// Memory
 	vmStat, err := mem.VirtualMemory()
@@ -70,6 +71,17 @@ func getFormattedStats() (string, error) {
 		loadLine = "Load Average  : not supported on this OS"
 	}
 
+	// Determine status summary
+	summary := "System status: Normal"
+	switch {
+	case cpuVal > 80:
+		summary = "⚠️  High CPU usage detected!"
+	case vmStat.UsedPercent > 90:
+		summary = "⚠️  High memory usage detected!"
+	case diskStat.UsedPercent > 90:
+		summary = "⚠️  Disk almost full!"
+	}
+
 	// Format output
 	stats := fmt.Sprintf(`
 ==============================
@@ -80,12 +92,14 @@ CPU Usage       : %.2f%%
 Memory Usage    : %.2f%% (%v / %v)
 Disk Usage      : %.2f%% (%v / %v)
 %s
-`,
-		osName,
-		cpuPercent[0],
+------------------------------
+%s
+`, osName,
+		cpuVal,
 		vmStat.UsedPercent, formatBytes(vmStat.Used), formatBytes(vmStat.Total),
 		diskStat.UsedPercent, formatBytes(diskStat.Used), formatBytes(diskStat.Total),
 		loadLine,
+		summary,
 	)
 
 	return stats, nil
