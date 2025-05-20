@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"time"
+
+	"encoding/csv"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -11,114 +14,117 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
+// Stats struct to hold performance metrics
 type Stats struct {
-	OS            string  `json:"os"`
-	CPUPercent    float64 `json:"cpu_percent"`
-	MemoryUsed    string  `json:"memory_used"`
-	MemoryTotal   string  `json:"memory_total"`
-	MemoryUsedPct float64 `json:"memory_used_percent"`
-	DiskUsed      string  `json:"disk_used"`
-	DiskTotal     string  `json:"disk_total"`
-	DiskUsedPct   float64 `json:"disk_used_percent"`
-	Load1         float64 `json:"load_1,omitempty"`
-	Load5         float64 `json:"load_5,omitempty"`
-	Load15        float64 `json:"load_15,omitempty"`
-	LoadMsg       string  `json:"load_msg,omitempty"`
+	OS            string
+	CPUPercent    float64
+	MemoryUsedPct float64
+	DiskUsedPct   float64
+	Load1         float64
+	Load5         float64
+	Load15        float64
 }
 
+// CollectStats gathers performance metrics
 func CollectStats() (Stats, error) {
 	var s Stats
+
 	s.OS = runtime.GOOS
 
-	cpuPercent, err := cpu.Percent(time.Second, false)
+	cpuPercents, err := cpu.Percent(0, false)
 	if err != nil {
-		return s, fmt.Errorf("CPU usage: %w", err)
+		return s, err
 	}
-	s.CPUPercent = cpuPercent[0]
+	if len(cpuPercents) > 0 {
+		s.CPUPercent = cpuPercents[0]
+	}
 
-	vmStat, err := mem.VirtualMemory()
+	vm, err := mem.VirtualMemory()
 	if err != nil {
-		return s, fmt.Errorf("Memory usage: %w", err)
+		return s, err
 	}
-	s.MemoryUsedPct = vmStat.UsedPercent
-	s.MemoryUsed = formatBytes(vmStat.Used)
-	s.MemoryTotal = formatBytes(vmStat.Total)
+	s.MemoryUsedPct = vm.UsedPercent
 
 	diskStat, err := disk.Usage("/")
 	if err != nil {
-		return s, fmt.Errorf("Disk usage: %w", err)
+		return s, err
 	}
 	s.DiskUsedPct = diskStat.UsedPercent
-	s.DiskUsed = formatBytes(diskStat.Used)
-	s.DiskTotal = formatBytes(diskStat.Total)
 
 	if s.OS == "linux" || s.OS == "darwin" {
-		loadStat, err := load.Avg()
+		loadAvg, err := load.Avg()
 		if err == nil {
-			s.Load1 = loadStat.Load1
-			s.Load5 = loadStat.Load5
-			s.Load15 = loadStat.Load15
-		} else {
-			s.LoadMsg = "Error retrieving load average"
+			s.Load1 = loadAvg.Load1
+			s.Load5 = loadAvg.Load5
+			s.Load15 = loadAvg.Load15
 		}
-	} else {
-		s.LoadMsg = "Load average not supported on this OS"
 	}
 
 	return s, nil
 }
 
-// Evaluates thresholds and returns a summary string
+// EvaluateThresholds provides a warning summary
 func EvaluateThresholds(s Stats) string {
-	switch {
-	case s.CPUPercent > cpuThreshold:
-		return "⚠️  High CPU usage detected!"
-	case s.MemoryUsedPct > memThreshold:
-		return "⚠️  High memory usage detected!"
-	case s.DiskUsedPct > diskThreshold:
-		return "⚠️  Disk almost full!"
-	default:
-		return "✅ System status: Normal"
+	var warnings []string
+	if s.CPUPercent > cpuThreshold {
+		warnings = append(warnings, fmt.Sprintf("High CPU usage: %.2f%%", s.CPUPercent))
 	}
+	if s.MemoryUsedPct > memThreshold {
+		warnings = append(warnings, fmt.Sprintf("High memory usage: %.2f%%", s.MemoryUsedPct))
+	}
+	if s.DiskUsedPct > diskThreshold {
+		warnings = append(warnings, fmt.Sprintf("High disk usage: %.2f%%", s.DiskUsedPct))
+	}
+
+	if len(warnings) > 0 {
+		return "⚠️ " + fmt.Sprintf("%s", warnings)
+	}
+	return "✅ All systems normal"
 }
 
+// FormatStats returns a human-readable string of the stats
 func FormatStats(s Stats, summary string) string {
-	loadLine := ""
-	if s.LoadMsg != "" {
-		loadLine = fmt.Sprintf("Load Average  : %s", s.LoadMsg)
-	} else {
-		loadLine = fmt.Sprintf("Load Average  : %.2f / %.2f / %.2f (1m / 5m / 15m)", s.Load1, s.Load5, s.Load15)
-	}
-
 	return fmt.Sprintf(`
-==============================
- Server Performance Snapshot
-==============================
-Operating System: %s
-CPU Usage       : %.2f%%
-Memory Usage    : %.2f%% (%s / %s)
-Disk Usage      : %.2f%% (%s / %s)
-%s
-------------------------------
-%s
-`, s.OS,
-		s.CPUPercent,
-		s.MemoryUsedPct, s.MemoryUsed, s.MemoryTotal,
-		s.DiskUsedPct, s.DiskUsed, s.DiskTotal,
-		loadLine,
-		summary,
-	)
+OS:            %s
+CPU Usage:     %.2f%%
+Memory Usage:  %.2f%%
+Disk Usage:    %.2f%%
+Load Average:  %.2f, %.2f, %.2f
+Summary:       %s
+`, s.OS, s.CPUPercent, s.MemoryUsedPct, s.DiskUsedPct, s.Load1, s.Load5, s.Load15, summary)
 }
 
-func formatBytes(b uint64) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
+// ExportToCSV appends stats to a CSV file
+func ExportToCSV(s Stats, filePath string) error {
+	_, err := os.Stat(filePath)
+	fileExists := !os.IsNotExist(err)
+
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
 	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	if !fileExists {
+		header := []string{"Timestamp", "OS", "CPU (%)", "Memory (%)", "Disk (%)", "Load 1", "Load 5", "Load 15"}
+		if err := writer.Write(header); err != nil {
+			return err
+		}
 	}
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
+
+	record := []string{
+		time.Now().Format(time.RFC3339),
+		s.OS,
+		fmt.Sprintf("%.2f", s.CPUPercent),
+		fmt.Sprintf("%.2f", s.MemoryUsedPct),
+		fmt.Sprintf("%.2f", s.DiskUsedPct),
+		fmt.Sprintf("%.2f", s.Load1),
+		fmt.Sprintf("%.2f", s.Load5),
+		fmt.Sprintf("%.2f", s.Load15),
+	}
+
+	return writer.Write(record)
 }
