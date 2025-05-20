@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"runtime"
@@ -13,37 +14,50 @@ import (
 )
 
 func main() {
-	stats, err := getFormattedStats()
-	if err != nil {
-		log.Fatalf("Error collecting stats: %v", err)
+	// Define CLI flag
+	interval := flag.Int("interval", 0, "Interval in seconds to refresh stats (0 = run once)")
+	flag.Parse()
+
+	// Run loop
+	for {
+		stats, err := getFormattedStats()
+		if err != nil {
+			log.Printf("Error collecting stats: %v", err)
+		} else {
+			fmt.Println(stats)
+		}
+
+		if *interval <= 0 {
+			break
+		}
+
+		time.Sleep(time.Duration(*interval) * time.Second)
 	}
-	fmt.Println(stats)
 }
 
 // GetFormattedStats gathers system stats and formats them.
 func getFormattedStats() (string, error) {
-	// Detect OS
 	osName := runtime.GOOS
 
-	// CPU usage
+	// CPU
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		return "", fmt.Errorf("CPU usage: %w", err)
 	}
 
-	// Memory usage
+	// Memory
 	vmStat, err := mem.VirtualMemory()
 	if err != nil {
 		return "", fmt.Errorf("Memory usage: %w", err)
 	}
 
-	// Disk usage
+	// Disk
 	diskStat, err := disk.Usage("/")
 	if err != nil {
 		return "", fmt.Errorf("Disk usage: %w", err)
 	}
 
-	// Load average (only on Unix-like systems)
+	// Load Average (Unix only)
 	var loadLine string
 	if osName == "linux" || osName == "darwin" {
 		loadStat, err := load.Avg()
