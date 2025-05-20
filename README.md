@@ -58,4 +58,3 @@ Press `Ctrl+C` to exit the monitor safely. It will flush logs and close the CSV 
 
 MIT License <br>
 © 2025 Mochamad Rizki
-```
